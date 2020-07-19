@@ -1,7 +1,28 @@
 "use strict";
 
+const CrossState = {
+    free: 1,
+    white: 2,
+    black: 3
+};
+
+class Board {
+    constructor(gridSize) {
+        this.grid = Array(gridSize).fill(Array(gridSize).fill(CrossState.free));
+    }
+}
+
+class Game {
+    constructor(gridSize) {
+        this.board = new Board(gridSize);
+    }
+}
+
 window.addEventListener("load", () => {
     let gridSize = 17;
+
+    let game = new Game(gridSize);
+
     
     let board = document.getElementById("board");
 
