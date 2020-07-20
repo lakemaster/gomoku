@@ -71,27 +71,42 @@ const CrossState = {
 class Grid {
     constructor(gridSize) {
         this.gridSize = gridSize;
-        this.grid = new Array(gridSize).fill(CrossState.free).map(()=>new Array(gridSize).fill(CrossState.free));
+        this.grid = new Array(gridSize).fill(CrossState.EMPTY).map(()=>new Array(gridSize).fill(CrossState.EMPTY));
     }
 
     at(x, y) {
-        if ( x > 0 && x < gridSize && y > 0 && y < this.gridSize) {
-            return this.grid[x][y];
+        let result = CrossState.OUTSIDE_OF_BOARD;
+        if ( x > 0 && x < this.gridSize && y > 0 && y < this.gridSize) {
+            result = this.grid[x][y];
         }
+        //console.log("Grid.at: " + x + "," + y + " = ", result);
+        return result;
     }
 
     atp(p) {
-        if ( p[0] > 0 && p[0] < gridSize && p[1] > 0 && p[1] < this.gridSize) {
+        if ( p[0] > 0 && p[0] < this.gridSize && p[1] > 0 && p[1] < this.gridSize) {
             return this.grid[p[0]][p[1]];
         }
-        return 
+        return CrossState.OUTSIDE_OF_BOARD;
+    }
+
+    setAt(x, y, c) {
+        if ( x > 0 && x < this.gridSize && y > 0 && y < this.gridSize) {
+            this.grid[x][y] = c;
+        }
+    }
+
+    setAtp(p, c) {
+        if ( p[0] > 0 && p[0] < this.gridSize && p[1] > 0 && p[1] < this.gridSize) {
+            grid[p[0]][p[1]] = c;
+        }
     }
 }
 
 class Board {
     constructor(gridSize) {
         this.gridSize = gridSize;
-        this.grid = new Array(gridSize).fill(CrossState.free).map(()=>new Array(gridSize).fill(CrossState.free));
+        this.grid = new Grid(gridSize);
     }
 
     setStone(stone, x, y) {
@@ -99,11 +114,12 @@ class Board {
             alert("Error: (" + x + "," + y + ") out of range (" + this.gridSize + ")");
             return;
         }
-        if ( ! this.isFree(x,y) ) {
+        if ( ! this.isFree(x, y) ) {
             alert("Error: Position (" + x + "," + y + ") occupied");
             return;
         }
-        this.grid[x][y] = stone;
+        console.log("set stone at " + x +"," + y);
+        this.grid.setAt(x, y, stone);
         game.renderer.drawStone(stone, x, y);
     }
 
@@ -112,7 +128,7 @@ class Board {
     }
 
     isFree(x, y) {
-        return this.grid[x][y] == CrossState.free;
+        return this.grid.at(x,y) == CrossState.EMPTY;
     }
 
     isValidAndFree(x, y) {
@@ -126,16 +142,16 @@ class Board {
 
         for ( let x = 1; x < this.gridSize-4; x++ ) {
             for ( let y = 1; y < this.gridSize-4; y++ ) {
-                if ( g[x][y] == stone ) {
-                    if ( g[x+1][y] == stone && g[x+2][y] == stone && g[x+3][y] == stone && g[x+4][y] == stone 
-                        || g[x+1][y+1] == stone && g[x+2][y+2] == stone && g[x+3][y+3] == stone && g[x+4][y+4] == stone 
-                        || g[x][y+1] == stone && g[x][y+2] == stone && g[x][y+3] == stone && g[x][y+4] == stone ) {
+                if ( g.at(x,y) == stone ) {
+                    if ( g.at(x+1,y) == stone && g.at(x+2,y) == stone && g.at(x+3,y) == stone && g.at(x+4,y) == stone 
+                        || g.at(x+1,y+1) == stone && g.at(x+2,y+2) == stone && g.at(x+3,y+3) == stone && g.at(x+4,y+4) == stone 
+                        || g.at(x,y+1) == stone && g.at(x,y+2) == stone && g.at(x,y+3) == stone && g.at(x,y+4) == stone ) {
                             return true;
                         }
 
                     if ( x > 4 ) {
-                        if (g[x-1][y+1] == stone && g[x-2][y+2] == stone && g[x-3][y+3] == stone && g[x-4][y+4] == stone 
-                            || g[x-1][y] == stone && g[x-2][y] == stone && g[x-3][y] == stone && g[x-4][y] == stone ) {
+                        if (g.at(x-1,y+1) == stone && g.at(x-2,y+2) == stone && g.at(x-3,y+3) == stone && g.at(x-4,y+4) == stone 
+                            || g.at(x-1,y) == stone && g.at(x-2,y) == stone && g.at(x-3,y) == stone && g.at(x-4,y) == stone ) {
                             return true;
                         }
                     }
@@ -221,13 +237,13 @@ class Calculator {
     }
 
     testPosition(grid, x, y) {
-        if ( grid[x][y] != CrossState.free ) {
+        if ( grid.at(x,y) != CrossState.EMPTY ) {
             return -1;
         }
 
         let vN = this.validNeighbors(x, y);
         for ( let i = 0 ; i < vN.length; i++ ) {
-            if ( grid[vN[i][0]][vN[i][1]] == CrossState.BLACK ) {
+            if ( grid.atp(vN[i]) == CrossState.BLACK ) {
                 return 0;
             }
         }
