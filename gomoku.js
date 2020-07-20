@@ -13,15 +13,15 @@ window.addEventListener("load", () => {
         let pos = game.renderer.calcPosition(event);
 
         if ( game.board.isValidAndFree(pos[0], pos[1]) ) {
-            game.board.setStone(CrossState.black, pos[0], pos[1]);
+            game.board.setStone(CrossState.BLACK, pos[0], pos[1]);
 
-            if ( game.board.gameOver(CrossState.black) ) {
+            if ( game.board.gameOver(CrossState.BLACK) ) {
                 game.stop(true);
             } else {
                 pos = game.calculator.calculate(game.board.grid);
                 if ( game.board.isValidAndFree(pos[0], pos[1]) ) {
-                    game.board.setStone(CrossState.white, pos[0], pos[1]);
-                    if ( game.board.gameOver(CrossState.white) ) {
+                    game.board.setStone(CrossState.WHITE, pos[0], pos[1]);
+                    if ( game.board.gameOver(CrossState.WHITE) ) {
                         game.stop(false);
                     }
                 }
@@ -62,10 +62,31 @@ class Game {
 }
 
 const CrossState = {
-    free: 1,
-    white: 2,
-    black: 3
+    EMPTY: 1,
+    WHITE: 2,
+    BLACK: 3,
+    OUTSIDE_OF_BOARD: 4
 };
+
+class Grid {
+    constructor(gridSize) {
+        this.gridSize = gridSize;
+        this.grid = new Array(gridSize).fill(CrossState.free).map(()=>new Array(gridSize).fill(CrossState.free));
+    }
+
+    at(x, y) {
+        if ( x > 0 && x < gridSize && y > 0 && y < this.gridSize) {
+            return this.grid[x][y];
+        }
+    }
+
+    atp(p) {
+        if ( p[0] > 0 && p[0] < gridSize && p[1] > 0 && p[1] < this.gridSize) {
+            return this.grid[p[0]][p[1]];
+        }
+        return 
+    }
+}
 
 class Board {
     constructor(gridSize) {
@@ -155,7 +176,7 @@ class Renderer {
     drawStone(stone, x, y) {
         let stoneElement = document.createElement("img");
     
-        stoneElement.src = (stone == CrossState.white) ? "white-stone.png" : "black-stone.png";
+        stoneElement.src = (stone == CrossState.WHITE) ? "white-stone.png" : "black-stone.png";
         stoneElement.style.position = "absolute";
         stoneElement.style.left = x * this.tileWidth - Math.round(this.tileWidth/2)+1;
         stoneElement.style.top = y * this.tileHeight - Math.round(this.tileHeight/2)+1;
@@ -206,7 +227,7 @@ class Calculator {
 
         let vN = this.validNeighbors(x, y);
         for ( let i = 0 ; i < vN.length; i++ ) {
-            if ( grid[vN[i][0]][vN[i][1]] == CrossState.black ) {
+            if ( grid[vN[i][0]][vN[i][1]] == CrossState.BLACK ) {
                 return 0;
             }
         }
@@ -236,4 +257,104 @@ class Calculator {
     }
 }
 
+const Direction = {
+    WEST: 0,
+    SOUTH_WEST: 1,
+    SOUTH: 2,
+    SOUTH_EAST: 3
+};
 
+class Path {
+    constructor(grid, color, x, y, direction) {
+        this.grid = grid;
+        this.color = color;
+        this.x = x;
+        this.y = y;
+        this.direction = direction;
+        this.length = 0;
+    }
+
+    getNext(p) {
+        switch(this.direction) {
+            case WEST:
+                return [p[0]++, p[1]];
+            case SOUTH_WEST:
+                return [p[0]++, p[1]++];
+            case SOUTH:
+                return [p[0], p[1]++];
+            case SOUTH_EAST:
+                return [p[0]--, p[1]++];
+        }
+    }
+
+    getLength() {
+        let g = this.grid;
+        let p = [this.x, this.y];
+
+        for ( i in [1, 2, 3, 4] ) {
+            p = this.getNext(p);
+            if ( g[p[0]][p[1]] != this.color) {
+                return i;
+            }
+        }
+        return 5;
+    }
+}
+
+class Valuation {
+    constructor(color) {
+        this.color = color;
+        this.five = 0;
+        this.fourOpen = 0;
+        this.fourHalfOpen = 0;
+        this.threeOpen = 0;
+        this.threeHalfOpen = 0;
+        this.twoOpen = 0;
+        this.twoHalfOpen = 0;
+    }
+
+    value(g) {
+        let gridSize = g[0].length;
+        for ( let x = 1; x < gridSize; x++ ) {
+            for ( let y = 1; y < gridSize; y++ ) {
+                if ( g[x][y] == this.color )
+                    paths = getPaths(g, x, y)
+                    paths.forEach((p)=>{
+                        
+                    });
+            }
+        }
+    }
+
+    getPaths(g, x, y) {
+        let gridSize = g[0].length;
+        let paths = [];
+        let c = this.color;
+
+        if ( g[x][y] != c ) {
+            return paths;
+        }
+
+        // west path
+        if ( g[x-1][y] != c && x < gridSize - 4 ) {
+                paths.push(new Path(g, c, x, y, Direction.WEST));
+        }
+
+        // south west path
+        if ( g[x-1][y-1] != c && x < gridSize - 4 && y < gridSize - 4 ) {
+            paths.push(new Path(g, c, x, y, Direction.SOUTH_WEST));
+        }
+
+        // south path
+        if ( g[x][y-1] != c && y < gridSize - 4 ) {
+            paths.push(new Path(g, c, x, y, Direction.SOUTH));
+        }
+
+        // south east path
+        if ( (x == gridSize-1 || g[x-1][y-1] != c) && x < gridSize - 4 && y < gridSize - 4 ) {
+            paths.push(new Path(g, c, x, y, Direction.SOUTH_EAST));
+        }
+
+        return paths;
+    }
+}
