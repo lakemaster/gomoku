@@ -1,5 +1,34 @@
 "use strict";
 
+let game;
+
+window.addEventListener("load", () => {
+
+    game = new Game(17);
+    game.start();
+
+    game.board.setStone(CrossState.black, 5, 5);
+    game.board.setStone(CrossState.white, 4, 5);
+    game.board.setStone(CrossState.black, 5, 4);
+    game.board.setStone(CrossState.white, 4, 4);
+    game.board.setStone(CrossState.black, 4, 6);
+    game.board.setStone(CrossState.white, 5, 6);
+
+    game.board.setStone(CrossState.black, 16, 16);
+
+});
+
+class Game {
+    constructor(gridSize) {
+        this.board = new Board(gridSize);
+        this.renderer = new Renderer(gridSize);
+    }
+
+    start() {
+        this.renderer.drawBoard();
+    }
+}
+
 const CrossState = {
     free: 1,
     white: 2,
@@ -8,61 +37,63 @@ const CrossState = {
 
 class Board {
     constructor(gridSize) {
-        this.grid = Array(gridSize).fill(Array(gridSize).fill(CrossState.free));
+        this.gridSize = gridSize;
+        this.grid = new Array(gridSize).fill(CrossState.free).map(()=>new Array(gridSize).fill(CrossState.free));
+    }
+
+    setStone(stone, x, y) {
+        if ( x <= 0 || x >= this.gridSize || y <= 0 || y >= this.gridSize) {
+            alert("Error: (" + x + "," + y + ") out of range (" + this.gridSize + ")");
+            return;
+        }
+        if ( this.grid[x][y] != CrossState.free ) {
+            alert("Error: Position (" + x + "," + y + ") occupied");
+            return;
+        }
+        this.grid[x][y] = stone;
+        game.renderer.drawStone(stone, x, y);
     }
 }
 
-class Game {
+class Renderer {
+
     constructor(gridSize) {
-        this.board = new Board(gridSize);
+        this.gridSize = gridSize;
+        this.board = document.getElementById("board");
+        this.width = board.clientWidth;
+        this.height = board.clientHeight;
+        this.tileWidth = Math.round(this.width / gridSize);
+        this.tileHeight = Math.round(this.height / gridSize);
+
     }
-}
 
-window.addEventListener("load", () => {
-    let gridSize = 17;
-
-    let game = new Game(gridSize);
-
-    
-    let board = document.getElementById("board");
-
-    let width = board.clientWidth;
-    let height = board.clientHeight;
-    let tileWidth = Math.round(width / gridSize);
-    let tileHeight = Math.round(height / gridSize);
-
-    let setStone = (white, x, y) => {
-        let stone = document.createElement("img");
-    
-        stone.src = white ? "white-stone.png" : "black-stone.png";
-        stone.style.position = "absolute";
-        stone.style.left = x * tileWidth - Math.round(tileWidth/2)+1;
-        stone.style.top = y * tileHeight - Math.round(tileHeight/2)+1;
-        stone.style.width = tileWidth;
-        stone.style.height = tileHeight;
-    
-        board.appendChild(stone);
-    }
-    
-    for ( let i=0; i < width-gridSize; i += tileWidth) {
-        for ( let j=0; j < height-gridSize; j += tileHeight) {
-            let tile = document.createElement("div");
-            tile.style.position = "absolute";
-            tile.style.left = i;
-            tile.style.top = j;
-            tile.style.width = tileWidth;
-            tile.style.height = tileHeight;
-            tile.style.border = "thin solid #000000"
-            board.appendChild(tile);
+    drawBoard(gridSize) {
+        for ( let i=0; i < this.width-this.gridSize; i += this.tileWidth) {
+            for ( let j=0; j < this.height-this.gridSize; j += this.tileHeight) {
+                let tile = document.createElement("div");
+                tile.style.position = "absolute";
+                tile.style.left = i;
+                tile.style.top = j;
+                tile.style.width = this.tileWidth;
+                tile.style.height = this.tileHeight;
+                tile.style.border = "thin solid #000000"
+                board.appendChild(tile);
+            }
         }
     }
 
-    setStone(false, 5, 5);
-    setStone(true, 4, 5);
-    setStone(false, 5, 4);
-    setStone(true, 4, 4);
-    setStone(false, 4, 6);
-    setStone(true, 5, 6);
+    drawStone(stone, x, y) {
+        let stoneElement = document.createElement("img");
+    
+        stoneElement.src = (stone == CrossState.white) ? "white-stone.png" : "black-stone.png";
+        stoneElement.style.position = "absolute";
+        stoneElement.style.left = x * this.tileWidth - Math.round(this.tileWidth/2)+1;
+        stoneElement.style.top = y * this.tileHeight - Math.round(this.tileHeight/2)+1;
+        stoneElement.style.width = this.tileWidth;
+        stoneElement.style.height = this.tileHeight;
+    
+        this.board.appendChild(stoneElement);
+    }
+}
 
 
-});
