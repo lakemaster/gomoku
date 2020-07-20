@@ -7,14 +7,16 @@ window.addEventListener("load", () => {
     game = new Game(17);
     game.start();
 
-    game.board.setStone(CrossState.black, 5, 5);
-    game.board.setStone(CrossState.white, 4, 5);
-    game.board.setStone(CrossState.black, 5, 4);
-    game.board.setStone(CrossState.white, 4, 4);
-    game.board.setStone(CrossState.black, 4, 6);
-    game.board.setStone(CrossState.white, 5, 6);
 
-    game.board.setStone(CrossState.black, 16, 16);
+    game.renderer.board.addEventListener("click", function(event) {
+        console.log(event);
+        let pos = game.renderer.calcPosition(event);
+        console.log(pos);
+
+        if ( pos[0] > 0 && pos[1] > 0 ) {
+            game.board.setStone(CrossState.black, pos[0], pos[1]);
+        }
+    })
 
 });
 
@@ -93,6 +95,22 @@ class Renderer {
         stoneElement.style.height = this.tileHeight;
     
         this.board.appendChild(stoneElement);
+    }
+
+    calcPosition(clickEvent) {
+        let xpx = clickEvent.clientX - this.board.offsetLeft;
+        let ypx = clickEvent.clientY - this.board.offsetTop;
+
+        let x = 10 * xpx / this.tileWidth;
+        let y = 10 * ypx / this.tileHeight;
+
+        let xm = x % 10;
+        let ym = y % 10;
+        if ( (xm >= 4 && xm <= 6) || (xm >= 4 && xm <= 6) ) {
+            return [-1, -1];
+        }
+
+        return( [Math.round(x/10), Math.round(y/10)] );
     }
 }
 
