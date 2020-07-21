@@ -28,10 +28,10 @@ window.addEventListener("load", () => {
             if ( game.board.gameOver(TILE_BLACK) ) {
                 game.stop(true);
             } else {
-                pos = game.calculator.calculate(game.board.grid);
+                let result = game.calculator.calculate(game.board.grid);
 
-                if ( game.board.isValidAndFree(pos[0], pos[1]) ) {
-                    game.board.setStone(TILE_WHITE, pos[0], pos[1]);
+                if ( game.board.isValidAndFree(result.position.x, result.position.y) ) {
+                    game.board.setStone(TILE_WHITE, result.position.x, result.position.y);
                     if ( game.board.gameOver(TILE_WHITE) ) {
                         game.stop(false);
                     }
@@ -52,7 +52,7 @@ class Game {
     constructor(gridSize) {
         this.board = new Board(gridSize);
         this.renderer = new Renderer(gridSize);
-        this.calculator = new Calculator(gridSize);
+        this.calculator = new Calculator(gridSize, TILE_WHITE, true);
         this.isRunning = false;
     }
 
@@ -204,18 +204,29 @@ class Renderer {
     }
 }
 
+class CalculationResult {
+    constructor(position, value) {
+        this.position = position;
+        this.value = value;
+    }
+
+    toString() {
+        return position.toString() + " - " + value;
+    }
+}
+
 class Calculator {
-    constructor(gridSize) {
+    constructor(gridSize, color, firstInNeighborhood) {
         this.gridSize = gridSize;
-        this.firstWhite = true;
+        this.color = color;
+        this.firstWhite = firstInNeighborhood;
     }
 
     calculate(grid) {
-
         // workaround to prevent starting in upper left corner
         if ( this.firstWhite ) {
             this.firstWhite = false;
-            return this.putInNeighborhood();
+            return new CalculationResult(this.putInNeighborhood(), 0);
         }
 
         let resultPosition;
@@ -225,9 +236,9 @@ class Calculator {
                 let p = new Position(x, y);
                 if ( p.isFree() ) {
                     p.setWhite();
-                    let value = this.valuate(TILE_WHITE);
+                    let value = this.valuate(this.color);
                     if ( value > highestValue) {
-                        console.log("new highest of " + value + " for position [" + p.x + "," + p.y + "]");
+                        console.log("new highest of " + value + " for position " + p.toString());
                         highestValue = value;
                         resultPosition = p;
                     }
@@ -235,8 +246,10 @@ class Calculator {
                 }
             }
         }
-        console.log("resulting position [" + resultPosition.x + "," + resultPosition.y + "]");
-        return [resultPosition.x, resultPosition.y];
+
+        let calculationResult = new CalculationResult(resultPosition, highestValue);
+        console.log(calculationResult);
+        return calculationResult;
     }
 
     valuate(color) {
@@ -252,7 +265,7 @@ class Calculator {
                 if ( p.isBlack() ) {
                     let vN = this.validNeighbors(x, y);
                     let i = Math.floor(Math.random() * vN.length);
-                    return [vN[i].x, vN[i].y];
+                    return vN[i];
                 }
             }
         }
