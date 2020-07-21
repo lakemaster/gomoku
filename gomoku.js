@@ -52,7 +52,7 @@ class Game {
     constructor(gridSize) {
         this.board = new Board(gridSize);
         this.renderer = new Renderer(gridSize);
-        this.calculator = new Calculator(gridSize, TILE_WHITE, true);
+        this.calculator = new Calculator(gridSize, TILE_WHITE, true, true);
         this.isRunning = false;
     }
 
@@ -216,10 +216,11 @@ class CalculationResult {
 }
 
 class Calculator {
-    constructor(gridSize, color, firstInNeighborhood) {
+    constructor(gridSize, color, firstInNeighborhood, calculateCounterMove) {
         this.gridSize = gridSize;
         this.color = color;
         this.firstWhite = firstInNeighborhood;
+        this.calculateCounterMove = calculateCounterMove;
     }
 
     calculate(grid) {
@@ -230,15 +231,25 @@ class Calculator {
         }
 
         let resultPosition;
-        let highestValue = -1;
+        let highestValue = -10000000;
         for ( let x = 1; x < BOARD_SIZE; x++) {
             for ( let y = 1; y < BOARD_SIZE; y++) {
                 let p = new Position(x, y);
                 if ( p.isFree() ) {
-                    p.setWhite();
+                    p.set(this.color);
                     let value = this.valuate(this.color);
+
+                    // calculate countermove
+                    if ( this.calculateCounterMove ) {
+                        let c = this.color == TILE_WHITE ? TILE_BLACK : TILE_WHITE;
+                        let cmCalculator = new Calculator(BOARD_SIZE, c, false, false);
+                        let cmResult = cmCalculator.calculate(grid);
+                        value = value - cmResult.value;
+                    }
+
+                    // save highest score
                     if ( value > highestValue) {
-                        console.log("new highest of " + value + " for position " + p.toString());
+                        //console.log("new highest of " + value + " for position " + p.toString());
                         highestValue = value;
                         resultPosition = p;
                     }
@@ -248,7 +259,7 @@ class Calculator {
         }
 
         let calculationResult = new CalculationResult(resultPosition, highestValue);
-        console.log(calculationResult);
+        //console.log(calculationResult);
         return calculationResult;
     }
 
