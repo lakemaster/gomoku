@@ -1,12 +1,16 @@
 "use strict";
 
 const BOARD_SIZE = 17;
-const CrossState = {
-    EMPTY: 1,
-    WHITE: 2,
-    BLACK: 3,
-    OUTSIDE_OF_BOARD: 4
-};
+
+const DIRECTION_WEST = 1;
+const DIRECTION_SOUTH_WEST = 2;
+const DIRECTION_SOUTH = 3;
+const DIRECTION_SOUTH_EAST = 4;
+
+const TILE_FREE = 1;
+const TILE_WHITE = 2;
+const TILE_BLACK = 3;
+const TILE_OUTSIDE_OF_BOARD = 4;
 
 let game;
 
@@ -19,15 +23,15 @@ window.addEventListener("load", () => {
         let pos = game.renderer.calcPosition(event);
 
         if ( game.board.isValidAndFree(pos[0], pos[1]) ) {
-            game.board.setStone(CrossState.BLACK, pos[0], pos[1]);
+            game.board.setStone(TILE_BLACK, pos[0], pos[1]);
 
-            if ( game.board.gameOver(CrossState.BLACK) ) {
+            if ( game.board.gameOver(TILE_BLACK) ) {
                 game.stop(true);
             } else {
                 pos = game.calculator.calculate(game.board.grid);
                 if ( game.board.isValidAndFree(pos[0], pos[1]) ) {
-                    game.board.setStone(CrossState.WHITE, pos[0], pos[1]);
-                    if ( game.board.gameOver(CrossState.WHITE) ) {
+                    game.board.setStone(TILE_WHITE, pos[0], pos[1]);
+                    if ( game.board.gameOver(TILE_WHITE) ) {
                         game.stop(false);
                     }
                 }
@@ -71,11 +75,11 @@ class Game {
 class Grid {
     constructor(gridSize) {
         this.gridSize = gridSize;
-        this.grid = new Array(gridSize).fill(CrossState.EMPTY).map(()=>new Array(gridSize).fill(CrossState.EMPTY));
+        this.grid = new Array(gridSize).fill(TILE_FREE).map(()=>new Array(gridSize).fill(TILE_FREE));
     }
 
     at(x, y) {
-        let result = CrossState.OUTSIDE_OF_BOARD;
+        let result = TILE_OUTSIDE_OF_BOARD;
         if ( x > 0 && x < this.gridSize && y > 0 && y < this.gridSize) {
             result = this.grid[x][y];
         }
@@ -87,7 +91,7 @@ class Grid {
         if ( p[0] > 0 && p[0] < this.gridSize && p[1] > 0 && p[1] < this.gridSize) {
             return this.grid[p[0]][p[1]];
         }
-        return CrossState.OUTSIDE_OF_BOARD;
+        return TILE_OUTSIDE_OF_BOARD;
     }
 
     setAt(x, y, c) {
@@ -118,7 +122,7 @@ class Board {
             alert("Error: Position (" + x + "," + y + ") occupied");
             return;
         }
-        console.log("set stone at " + x +"," + y);
+        // console.log("set stone at " + x +"," + y);
         this.grid.setAt(x, y, stone);
         game.renderer.drawStone(stone, x, y);
     }
@@ -128,37 +132,16 @@ class Board {
     }
 
     isFree(x, y) {
-        return this.grid.at(x,y) == CrossState.EMPTY;
+        return this.grid.at(x,y) == TILE_FREE;
     }
 
     isValidAndFree(x, y) {
         return  this.isValid(x, y) && this.isFree(x, y);
     }
 
-
-    // todo: is buggy - improve
     gameOver(stone) {
-        let g = this.grid;
-
-        for ( let x = 1; x < this.gridSize-4; x++ ) {
-            for ( let y = 1; y < this.gridSize-4; y++ ) {
-                if ( g.at(x,y) == stone ) {
-                    if ( g.at(x+1,y) == stone && g.at(x+2,y) == stone && g.at(x+3,y) == stone && g.at(x+4,y) == stone 
-                        || g.at(x+1,y+1) == stone && g.at(x+2,y+2) == stone && g.at(x+3,y+3) == stone && g.at(x+4,y+4) == stone 
-                        || g.at(x,y+1) == stone && g.at(x,y+2) == stone && g.at(x,y+3) == stone && g.at(x,y+4) == stone ) {
-                            return true;
-                        }
-
-                    if ( x > 4 ) {
-                        if (g.at(x-1,y+1) == stone && g.at(x-2,y+2) == stone && g.at(x-3,y+3) == stone && g.at(x-4,y+4) == stone 
-                            || g.at(x-1,y) == stone && g.at(x-2,y) == stone && g.at(x-3,y) == stone && g.at(x-4,y) == stone ) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
+        let valuation = new Valuation(stone);
+        return valuation.value() >= 10000;
     }
 }
 
@@ -192,7 +175,7 @@ class Renderer {
     drawStone(stone, x, y) {
         let stoneElement = document.createElement("img");
     
-        stoneElement.src = (stone == CrossState.WHITE) ? "white-stone.png" : "black-stone.png";
+        stoneElement.src = (stone == TILE_WHITE) ? "white-stone.png" : "black-stone.png";
         stoneElement.style.position = "absolute";
         stoneElement.style.left = x * this.tileWidth - Math.round(this.tileWidth/2)+1;
         stoneElement.style.top = y * this.tileHeight - Math.round(this.tileHeight/2)+1;
@@ -236,19 +219,25 @@ class Calculator {
         return [-1, -1];
     }
 
-    testPosition(grid, x, y) {
-        if ( grid.at(x,y) != CrossState.EMPTY ) {
+    testPosition(grid, x, y, color) {
+        if ( grid.at(x,y) != TILE_FREE ) {
             return -1;
         }
 
         let vN = this.validNeighbors(x, y);
         for ( let i = 0 ; i < vN.length; i++ ) {
-            if ( grid.atp(vN[i]) == CrossState.BLACK ) {
+            if ( grid.atp(vN[i]) == TILE_BLACK ) {
                 return 0;
             }
         }
 
         return -1;
+    }
+
+
+    valuate(color) {
+        valuation = new Valuation(color);
+        return valuation.value();
     }
 
     validNeighbors(x, y) {
@@ -273,12 +262,6 @@ class Calculator {
     }
 }
 
-const Directions = {
-    WEST: 0,
-    SOUTH_WEST: 1,
-    SOUTH: 2,
-    SOUTH_EAST: 3
-};
 
 class Position {
     constructor(x, y) {
@@ -288,51 +271,66 @@ class Position {
     }
 
     isFree() {
-        if ( this.grid.at(x,y) == CrossState.EMPTY ) {
+        if ( this.grid.at(this.x, this.y) == TILE_FREE ) {
             return true;
         }
         return false;
     }
 
     is(stone) {
-        if ( this.grid.at(x,y) == stone ) {
+        if ( this.grid.at(this.x, this.y) == stone ) {
             return true;
         }
         return false;
     }
 
+    isValid() {
+        if ( this.x > 0 && this.x < BOARD_SIZE && this.y > 0 && this.y < BOARD_SIZE )
+            return true;
+
+        return false;
+    }
+
     next(direction) {
-        switch(this.direction) {
-            case WEST:
-                return new Position(x++, y);
-            case SOUTH_WEST:
-                return new Position(x++, y++);
-            case SOUTH:
-                return new Position(x, y++);
-            case SOUTH_EAST:
-                return new Position(x--, y++);
-        }
+        if ( direction == DIRECTION_WEST )
+            return new Position(this.x+1, this.y);
+        if ( direction == DIRECTION_SOUTH_WEST )
+            return new Position(this.x+1, this.y+1);
+        if ( direction == DIRECTION_SOUTH )
+            return new Position(this.x, this.y+1);
+        if ( direction == DIRECTION_SOUTH_EAST )
+            return new Position(this.x-1, this.y+1);
+
+        console.log("return no Position");
     }
 
     prior(direction) {
-        switch(this.direction) {
-            case WEST:
-                return new Position(x--, y);
-            case SOUTH_WEST:
-                return new Position(x--, y--);
-            case SOUTH:
-                return new Position(x, y--);
-            case SOUTH_EAST:
-                return new Position(x++, y--);
-        }
-    }
+        if ( direction == DIRECTION_WEST )
+            return new Position(this.x-1, this.y);
+        if ( direction == DIRECTION_SOUTH_WEST )
+            return new Position(this.x-1, this.y-1);
+        if ( direction == DIRECTION_SOUTH )
+            return new Position(this.x, this.y-1);
+        if ( direction == DIRECTION_SOUTH_EAST )
+            return new Position(this.x+1, this.y-1);
+
+        console.log("return no Position");
+    }   
 }
 
+// todo: does not work
+Position.prototype.toString = function positionToString() {
+    const ret = "[" + this.x + "," + this.y + "]";
+    return ret;
+};
+
+
+
 class Path {
-    constructor(color, x, y, direction) {
+    constructor(color, position, direction) {
         this.grid = game.board.grid;
         this.color = color;
-        this.position = new Position(x, y);
+        this.position = position;
         this.direction = direction;
         this.length = this.getLength();
     }
@@ -345,7 +343,7 @@ class Path {
     }
 
     isExpandable() {
-        length = this.length;
+        let length = this.length;
 
         // look in front of path
         for ( let p = this.position.prior(this.direction); length < 5 && p.isValid() && (p.isFree() || p.is(this.color)); p = p.prior(this.direction) )
@@ -362,7 +360,7 @@ class Path {
     }
 
     getEndPosition() {
-        endPosition = this.position;
+        let endPosition = this.position;
         for ( let p = this.position.next(this.direction); p.isValid() && p.is(this.color); p = p.next(this.direction) )
             endPosition = p;
 
@@ -370,7 +368,7 @@ class Path {
     }
 
     getLength() {
-        length = 1;
+        let length = 1;
         for ( let p = this.position.next(this.direction); p.isValid() && p.is(this.color); p = p.next(this.direction) )
             length++;
 
@@ -388,45 +386,51 @@ class Valuation {
         this.threeHalfOpen = 0;
         this.twoOpen = 0;
         this.twoHalfOpen = 0;
+        this.neighbor = 0;
     }
 
     value() {
+        console.log("valuation of " + this.color);
+
         let g = game.board.grid;
         for ( let x = 1; x < BOARD_SIZE; x++ ) {
             for ( let y = 1; y < BOARD_SIZE; y++ ) {
-                p = new Position(x,y);
-                if ( p.is(this.color) )
-                    paths = getPaths(p)
-                    paths.forEach((p)=>{
-                        if ( p.isFive ) {
+                let p = new Position(x,y);
+                if ( p.is(this.color) ) {
+                    Valuation.getPaths(p, this.color).forEach((p)=>{
+                        console.log(p);
+                        if ( p.isFive() ) {
                             this.five++;
                         }
                     });
+                }
             }
         }
-        
-        return this.five * 10000
+
+        let value = this.five * 10000
             + this.fourOpen * 1000
-            + this.fourOpen * 100
+            + this.fourHalfOpen * 100
             + this.threeOpen * 10
             + this.threeHalfOpen * 5
             + this.twoOpen * 3
             + this.twoHalfOpen * 2
             + this.neighbor * 1;
+
+        console.log("valuation of " + this.color +  " = " + value);
+        return value;
     }
 
-    getPaths(position) {
+    static getPaths(position, color) {
         let paths = [];
-        let c = this.color;
 
         // stating position has to be of this color
-        if ( !position.is(c) ) {
+        if ( !position.is(color) ) {
             return paths;
         }
 
-        for ( direction in Directions ) {
-            if ( !position.prior().is(direction) ) {
-                path = new Path(c, x, y, direction);
+        for ( let direction of [DIRECTION_WEST, DIRECTION_SOUTH_WEST, DIRECTION_SOUTH, DIRECTION_SOUTH_EAST] ) {
+            if ( !position.prior(direction).is(color) ) {
+                let path = new Path(color, position, direction);
                 if ( path.isExpandable() || path.isFive() ) {
                     paths.push(path);
                 }
