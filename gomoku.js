@@ -343,31 +343,31 @@ class Valuation {
     }
 
     getPaths(g, x, y) {
-        let gridSize = g[0].length;
+        let gridSize = grid.gridSize;
         let paths = [];
         let c = this.color;
 
-        if ( g[x][y] != c ) {
+        if ( g.at(x,y) != c ) {
             return paths;
         }
 
         // west path
-        if ( g[x-1][y] != c && x < gridSize - 4 ) {
+        if ( g.at(x-1, y) != c && x < gridSize - 4 ) {
                 paths.push(new Path(g, c, x, y, Direction.WEST));
         }
 
         // south west path
-        if ( g[x-1][y-1] != c && x < gridSize - 4 && y < gridSize - 4 ) {
+        if ( g.at(x-1,y-1) != c && x < gridSize - 4 && y < gridSize - 4 ) {
             paths.push(new Path(g, c, x, y, Direction.SOUTH_WEST));
         }
 
         // south path
-        if ( g[x][y-1] != c && y < gridSize - 4 ) {
+        if ( g.at(x,y-1) != c && y < gridSize - 4 ) {
             paths.push(new Path(g, c, x, y, Direction.SOUTH));
         }
 
         // south east path
-        if ( (x == gridSize-1 || g[x-1][y-1] != c) && x < gridSize - 4 && y < gridSize - 4 ) {
+        if ( (x == gridSize-1 || g.at(x-1,y-1) != c) && x < gridSize - 4 && y < gridSize - 4 ) {
             paths.push(new Path(g, c, x, y, Direction.SOUTH_EAST));
         }
 
