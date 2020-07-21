@@ -29,6 +29,7 @@ window.addEventListener("load", () => {
                 game.stop(true);
             } else {
                 pos = game.calculator.calculate(game.board.grid);
+
                 if ( game.board.isValidAndFree(pos[0], pos[1]) ) {
                     game.board.setStone(TILE_WHITE, pos[0], pos[1]);
                     if ( game.board.gameOver(TILE_WHITE) ) {
@@ -101,8 +102,9 @@ class Grid {
     }
 
     setAtp(p, c) {
+        //console.log("setting stone " + c + " at [" + p[0] + "," + p[1] + "]");
         if ( p[0] > 0 && p[0] < this.gridSize && p[1] > 0 && p[1] < this.gridSize) {
-            grid[p[0]][p[1]] = c;
+            this.grid[p[0]][p[1]] = c;
         }
     }
 }
@@ -205,56 +207,72 @@ class Renderer {
 class Calculator {
     constructor(gridSize) {
         this.gridSize = gridSize;
+        this.firstWhite = true;
     }
 
     calculate(grid) {
-        for ( let x = 1; x < this.gridSize; x++) {
-            for ( let y = 1; y < this.gridSize; y++) {
-                let res = this.testPosition(grid, x, y);
-                if ( res >= 0 ) {
-                    return [x, y];
+
+        // workaround to prevent starting in upper left corner
+        if ( this.firstWhite ) {
+            this.firstWhite = false;
+            return this.putInNeighborhood();
+        }
+
+        let resultPosition;
+        let highestValue = -1;
+        for ( let x = 1; x < BOARD_SIZE; x++) {
+            for ( let y = 1; y < BOARD_SIZE; y++) {
+                let p = new Position(x, y);
+                if ( p.isFree() ) {
+                    p.setWhite();
+                    let value = this.valuate(TILE_WHITE);
+                    if ( value > highestValue) {
+                        console.log("new highest of " + value + " for position [" + p.x + "," + p.y + "]");
+                        highestValue = value;
+                        resultPosition = p;
+                    }
+                    p.setFree();
                 }
             }
         }
-        return [-1, -1];
+        console.log("resulting position [" + resultPosition.x + "," + resultPosition.y + "]");
+        return [resultPosition.x, resultPosition.y];
     }
-
-    testPosition(grid, x, y, color) {
-        if ( grid.at(x,y) != TILE_FREE ) {
-            return -1;
-        }
-
-        let vN = this.validNeighbors(x, y);
-        for ( let i = 0 ; i < vN.length; i++ ) {
-            if ( grid.atp(vN[i]) == TILE_BLACK ) {
-                return 0;
-            }
-        }
-
-        return -1;
-    }
-
 
     valuate(color) {
-        valuation = new Valuation(color);
+        let valuation = new Valuation(color);
         return valuation.value();
+    }
+
+    putInNeighborhood() {
+        console.log("putInNeighborhood called");
+        for ( let x = 1; x < BOARD_SIZE; x++) {
+            for ( let y = 1; y < BOARD_SIZE; y++) {
+                let p = new Position(x, y);
+                if ( p.isBlack() ) {
+                    let vN = this.validNeighbors(x, y);
+                    let i = Math.floor(Math.random() * vN.length);
+                    return [vN[i].x, vN[i].y];
+                }
+            }
+        }
     }
 
     validNeighbors(x, y) {
         let neighbors = [
-            [x-1, y-1],
-            [x, y-1],
-            [x+1, y-1],
-            [x-1, y],
-            [x+1, y],
-            [x-1, y+1],
-            [x, y+1],
-            [x+1, y+1]
+            Position.of(x-1, y-1),
+            Position.of(x, y-1),
+            Position.of(x+1, y-1),
+            Position.of(x-1, y),
+            Position.of(x+1, y),
+            Position.of(x-1, y+1),
+            Position.of(x, y+1),
+            Position.of(x+1, y+1)
         ];
 
         let validNeighbors = [];
         neighbors.forEach((pos)=>{
-            if ( game.board.isValid(pos[0], pos[1]) ) {
+            if ( pos.isValid() && pos.isFree() ) {
                     validNeighbors.push(pos);
             }
         });
@@ -291,6 +309,40 @@ class Position {
         return false;
     }
 
+    isValidAndFree() {
+        return this.isValid() && this.isFree();
+    }
+
+    isInValidOrOccupied() {
+        return !this.isValid() || !this.isFree();
+    }
+
+    set(stone) {
+        //console.log("Set stone " + stone + " at [" + this.x + "," + this.y + "]")
+        this.grid.setAtp([this.x, this.y], stone);
+        //console.log("stone at [" + this.x + "," + this.y + "] = " + this.grid.at(this.x, this.y));
+    }
+
+    isWhite() {
+        return this.is(TILE_WHITE);
+    }
+
+    isBlack() {
+        return this.is(TILE_BLACK);
+    }
+
+    setWhite() {
+        this.set(TILE_WHITE);
+    }
+
+    setBlack() {
+        this.set(TILE_BLACK);
+    }
+
+    setFree() {
+        this.set(TILE_FREE);
+    }
+
     next(direction) {
         if ( direction == DIRECTION_WEST )
             return new Position(this.x+1, this.y);
@@ -316,6 +368,15 @@ class Position {
 
         console.log("return no Position");
     }   
+
+    toString() {
+        const ret = "[" + this.x + "," + this.y + "]";
+        return ret;
+    }
+
+    static of(x, y) {
+        return new Position(x, y);
+    }
 }
 
 // todo: does not work
@@ -333,13 +394,6 @@ class Path {
         this.position = position;
         this.direction = direction;
         this.length = this.getLength();
-    }
-
-    isFive() {
-        if ( this.length >= 5 ) {
-            return true;
-        }
-        return false;
     }
 
     isExpandable() {
@@ -374,6 +428,59 @@ class Path {
 
         return length;
     }
+
+    isFive() {
+        return this.length >= 5;
+    }
+
+    isXOpen(len) {
+        return this.length == len
+            && this.getEndPosition().next(this.direction).isValidAndFree() 
+            && this.position.prior(this.direction).isValidAndFree();
+    }
+
+    isXHalfOpen(len) {
+        if ( this.length != len ) {
+            return false;
+        }
+
+        return (this.getEndPosition().next(this.direction).isValidAndFree() 
+                && this.position.prior(this.direction).isInValidOrOccupied())
+            || (this.getEndPosition().next(this.direction).isInValidOrOccupied() 
+                && this.position.prior(this.direction).isValidAndFree());
+    }
+    
+    isFourOpen() {
+        return this.isXOpen(4);
+    }
+
+    isFourHalfOpen() {
+        return this.isXHalfOpen(4);
+    }
+    
+    isThreeOpen() {
+        return this.isXOpen(3);
+    }
+
+    isThreeHalfOpen() {
+        return this.isXHalfOpen(3);
+    }
+
+    isTwoOpen() {
+        return this.isXOpen(2);
+    }
+
+    isTwoHalfOpen() {
+        return this.isXHalfOpen(2);
+    }
+
+    isNeighbor() {
+        return false;
+    }
+
+    toString() {
+        return "Position: " + this.position.toString() + " direction=" + this.direction + " color=" + this.color + " length=" + this.length;
+    }
 }
 
 class Valuation {
@@ -390,18 +497,31 @@ class Valuation {
     }
 
     value() {
-        console.log("valuation of " + this.color);
+        //console.log("valuation of " + this.color);
 
         let g = game.board.grid;
         for ( let x = 1; x < BOARD_SIZE; x++ ) {
             for ( let y = 1; y < BOARD_SIZE; y++ ) {
                 let p = new Position(x,y);
                 if ( p.is(this.color) ) {
-                    Valuation.getPaths(p, this.color).forEach((p)=>{
-                        console.log(p);
-                        if ( p.isFive() ) {
+                    Valuation.getPaths(p, this.color).forEach((path)=>{
+                        //console.log(path);
+                        if ( path.isFive() )
                             this.five++;
-                        }
+                        else if ( path.isFourOpen() )
+                            this.fourOpen++;
+                        else if ( path.isFourHalfOpen() )
+                            this.fourHalfOpen++;
+                        else if ( path.isThreeOpen() )
+                            this.threeOpen++;
+                        else if ( path.isThreeHalfOpen() )
+                            this.threeHalfOpen++;
+                        else if ( path.isTwoOpen() )
+                            this.twoOpen++;
+                        else if ( path.isTwoHalfOpen() )
+                            this.twoHalfOpen++;
+                        else if ( path.isNeighbor() )
+                            this.neighbor++;
                     });
                 }
             }
@@ -416,7 +536,6 @@ class Valuation {
             + this.twoHalfOpen * 2
             + this.neighbor * 1;
 
-        console.log("valuation of " + this.color +  " = " + value);
         return value;
     }
 
