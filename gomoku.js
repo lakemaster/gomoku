@@ -235,7 +235,7 @@ class Calculator {
         for ( let x = 1; x < BOARD_SIZE; x++) {
             for ( let y = 1; y < BOARD_SIZE; y++) {
                 let p = new Position(x, y);
-                if ( p.isFree() ) {
+                if ( p.isFree() && p.isInExtendedNeighborhood()) {
                     p.set(this.color);
                     let value = this.valuate(this.color);
 
@@ -274,33 +274,12 @@ class Calculator {
             for ( let y = 1; y < BOARD_SIZE; y++) {
                 let p = new Position(x, y);
                 if ( p.isBlack() ) {
-                    let vN = this.validNeighbors(x, y);
-                    let i = Math.floor(Math.random() * vN.length);
-                    return vN[i];
+                    let vn = Position.validNeighbors(p, false, true);
+                    let i = Math.floor(Math.random() * vn.length);
+                    return vn[i];
                 }
             }
         }
-    }
-
-    validNeighbors(x, y) {
-        let neighbors = [
-            Position.of(x-1, y-1),
-            Position.of(x, y-1),
-            Position.of(x+1, y-1),
-            Position.of(x-1, y),
-            Position.of(x+1, y),
-            Position.of(x-1, y+1),
-            Position.of(x, y+1),
-            Position.of(x+1, y+1)
-        ];
-
-        let validNeighbors = [];
-        neighbors.forEach((pos)=>{
-            if ( pos.isValid() && pos.isFree() ) {
-                    validNeighbors.push(pos);
-            }
-        });
-        return validNeighbors;
     }
 }
 
@@ -401,6 +380,61 @@ class Position {
     static of(x, y) {
         return new Position(x, y);
     }
+
+    isInExtendedNeighborhood() {
+        let validNeighbors = Position.validNeighbors(this, true, false);
+        for ( let i = 0; i < validNeighbors.length; i++ ) {
+            if ( !validNeighbors[i].isFree() ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
+    static validNeighbors(p, extended, checkFree) {
+        let neighbors = [
+            Position.of(p.x-1, p.y-1),
+            Position.of(p.x, p.y-1),
+            Position.of(p.x+1, p.y-1),
+            Position.of(p.x-1, p.y),
+            Position.of(p.x+1, p.y),
+            Position.of(p.x-1, p.y+1),
+            Position.of(p.x, p.y+1),
+            Position.of(p.x+1, p.y+1)
+        ];
+
+        if ( extended ) {
+            let extendedNeighbors = [
+                Position.of(p.x-2, p.y-2),
+                Position.of(p.x-2, p.y-1),
+                Position.of(p.x-2, p.y),
+                Position.of(p.x-2, p.y+1),
+                Position.of(p.x-2, p.y+2),
+                Position.of(p.x-1, p.y-2),
+                Position.of(p.x-1, p.y+2),
+                Position.of(p.x, p.y-2),
+                Position.of(p.x, p.y+2),
+                Position.of(p.x+1, p.y-2),
+                Position.of(p.x+1, p.y+2),
+                Position.of(p.x+2, p.y-2),
+                Position.of(p.x+2, p.y-1),
+                Position.of(p.x+2, p.y),
+                Position.of(p.x+2, p.y+1),
+                Position.of(p.x+2, p.y+2),
+            ];
+            neighbors.concat(extendedNeighbors);
+        }
+
+        let validNeighbors = [];
+        neighbors.forEach((pos)=>{
+            if ( pos.isValid() && (!checkFree || pos.isFree()) ) {
+                    validNeighbors.push(pos);
+            }
+        });
+        return validNeighbors;
+    }
+
 }
 
 // todo: does not work
