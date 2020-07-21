@@ -1,13 +1,19 @@
 "use strict";
 
+const BOARD_SIZE = 17;
+const CrossState = {
+    EMPTY: 1,
+    WHITE: 2,
+    BLACK: 3,
+    OUTSIDE_OF_BOARD: 4
+};
+
 let game;
 
 window.addEventListener("load", () => {
 
-    game = new Game(17);
+    game = new Game(BOARD_SIZE);
     game.start();
-
-
 
     let handleMouseClick = function(event) {
         let pos = game.renderer.calcPosition(event);
@@ -61,12 +67,6 @@ class Game {
         }
 }
 
-const CrossState = {
-    EMPTY: 1,
-    WHITE: 2,
-    BLACK: 3,
-    OUTSIDE_OF_BOARD: 4
-};
 
 class Grid {
     constructor(gridSize) {
@@ -273,47 +273,108 @@ class Calculator {
     }
 }
 
-const Direction = {
+const Directions = {
     WEST: 0,
     SOUTH_WEST: 1,
     SOUTH: 2,
     SOUTH_EAST: 3
 };
 
-class Path {
-    constructor(grid, color, x, y, direction) {
-        this.grid = grid;
-        this.color = color;
+class Position {
+    constructor(x, y) {
+        this.grid = game.board.grid;
         this.x = x;
         this.y = y;
-        this.direction = direction;
-        this.length = 0;
     }
 
-    getNext(p) {
+    isFree() {
+        if ( this.grid.at(x,y) == CrossState.EMPTY ) {
+            return true;
+        }
+        return false;
+    }
+
+    is(stone) {
+        if ( this.grid.at(x,y) == stone ) {
+            return true;
+        }
+        return false;
+    }
+
+    next(direction) {
         switch(this.direction) {
             case WEST:
-                return [p[0]++, p[1]];
+                return new Position(x++, y);
             case SOUTH_WEST:
-                return [p[0]++, p[1]++];
+                return new Position(x++, y++);
             case SOUTH:
-                return [p[0], p[1]++];
+                return new Position(x, y++);
             case SOUTH_EAST:
-                return [p[0]--, p[1]++];
+                return new Position(x--, y++);
         }
+    }
+
+    prior(direction) {
+        switch(this.direction) {
+            case WEST:
+                return new Position(x--, y);
+            case SOUTH_WEST:
+                return new Position(x--, y--);
+            case SOUTH:
+                return new Position(x, y--);
+            case SOUTH_EAST:
+                return new Position(x++, y--);
+        }
+    }
+}
+
+class Path {
+    constructor(color, x, y, direction) {
+        this.grid = game.board.grid;
+        this.color = color;
+        this.position = new Position(x, y);
+        this.direction = direction;
+        this.length = this.getLength();
+    }
+
+    isFive() {
+        if ( this.length >= 5 ) {
+            return true;
+        }
+        return false;
+    }
+
+    isExpandable() {
+        length = this.length;
+
+        // look in front of path
+        for ( let p = this.position.prior(this.direction); length < 5 && p.isValid() && (p.isFree() || p.is(this.color)); p = p.prior(this.direction) )
+            length++;
+
+        // look behind path
+        for ( let p = this.getEndPosition().next(this.direction); length < 5 && p.isValid() && (p.isFree() || p.is(this.color)); p = p.next(this.direction) )
+            length++;
+
+        if ( length >= 5 ) 
+            return true;
+        
+        return false;
+    }
+
+    getEndPosition() {
+        endPosition = this.position;
+        for ( let p = this.position.next(this.direction); p.isValid() && p.is(this.color); p = p.next(this.direction) )
+            endPosition = p;
+
+        return endPosition;
     }
 
     getLength() {
-        let g = this.grid;
-        let p = [this.x, this.y];
+        length = 1;
+        for ( let p = this.position.next(this.direction); p.isValid() && p.is(this.color); p = p.next(this.direction) )
+            length++;
 
-        for ( i in [1, 2, 3, 4] ) {
-            p = this.getNext(p);
-            if ( g[p[0]][p[1]] != this.color) {
-                return i;
-            }
-        }
-        return 5;
+        return length;
     }
 }
 
@@ -329,48 +390,49 @@ class Valuation {
         this.twoHalfOpen = 0;
     }
 
-    value(g) {
-        let gridSize = g[0].length;
-        for ( let x = 1; x < gridSize; x++ ) {
-            for ( let y = 1; y < gridSize; y++ ) {
-                if ( g[x][y] == this.color )
-                    paths = getPaths(g, x, y)
+    value() {
+        let g = game.board.grid;
+        for ( let x = 1; x < BOARD_SIZE; x++ ) {
+            for ( let y = 1; y < BOARD_SIZE; y++ ) {
+                p = new Position(x,y);
+                if ( p.is(this.color) )
+                    paths = getPaths(p)
                     paths.forEach((p)=>{
-                        
+                        if ( p.isFive ) {
+                            this.five++;
+                        }
                     });
             }
         }
+        
+        return this.five * 10000
+            + this.fourOpen * 1000
+            + this.fourOpen * 100
+            + this.threeOpen * 10
+            + this.threeHalfOpen * 5
+            + this.twoOpen * 3
+            + this.twoHalfOpen * 2
+            + this.neighbor * 1;
     }
 
-    getPaths(g, x, y) {
-        let gridSize = grid.gridSize;
+    getPaths(position) {
         let paths = [];
         let c = this.color;
 
-        if ( g.at(x,y) != c ) {
+        // stating position has to be of this color
+        if ( !position.is(c) ) {
             return paths;
         }
 
-        // west path
-        if ( g.at(x-1, y) != c && x < gridSize - 4 ) {
-                paths.push(new Path(g, c, x, y, Direction.WEST));
+        for ( direction in Directions ) {
+            if ( !position.prior().is(direction) ) {
+                path = new Path(c, x, y, direction);
+                if ( path.isExpandable() || path.isFive() ) {
+                    paths.push(path);
+                }
+            }
         }
 
-        // south west path
-        if ( g.at(x-1,y-1) != c && x < gridSize - 4 && y < gridSize - 4 ) {
-            paths.push(new Path(g, c, x, y, Direction.SOUTH_WEST));
-        }
-
-        // south path
-        if ( g.at(x,y-1) != c && y < gridSize - 4 ) {
-            paths.push(new Path(g, c, x, y, Direction.SOUTH));
-        }
-
-        // south east path
-        if ( (x == gridSize-1 || g.at(x-1,y-1) != c) && x < gridSize - 4 && y < gridSize - 4 ) {
-            paths.push(new Path(g, c, x, y, Direction.SOUTH_EAST));
-        }
-
-        return paths;
+       return paths;
     }
 }
