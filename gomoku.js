@@ -16,7 +16,7 @@ let game;
 
 window.addEventListener("load", () => {
 
-    game = new Game(BOARD_SIZE);
+    game = new Game();
     game.start();
 
     let handleMouseClick = function(event) {
@@ -49,10 +49,10 @@ window.addEventListener("load", () => {
 });
 
 class Game {
-    constructor(gridSize) {
-        this.board = new Board(gridSize);
-        this.renderer = new Renderer(gridSize);
-        this.calculator = new Calculator(gridSize, TILE_WHITE, true, true);
+    constructor() {
+        this.board = new Board();
+        this.renderer = new Renderer();
+        this.calculator = new Calculator(TILE_WHITE, true, true);
         this.isRunning = false;
     }
 
@@ -74,14 +74,13 @@ class Game {
 
 
 class Grid {
-    constructor(gridSize) {
-        this.gridSize = gridSize;
-        this.grid = new Array(gridSize).fill(TILE_FREE).map(()=>new Array(gridSize).fill(TILE_FREE));
+    constructor() {
+        this.grid = new Array(BOARD_SIZE).fill(TILE_FREE).map(()=>new Array(BOARD_SIZE).fill(TILE_FREE));
     }
 
     at(x, y) {
         let result = TILE_OUTSIDE_OF_BOARD;
-        if ( x > 0 && x < this.gridSize && y > 0 && y < this.gridSize) {
+        if ( x > 0 && x < BOARD_SIZE && y > 0 && y < BOARD_SIZE) {
             result = this.grid[x][y];
         }
         //console.log("Grid.at: " + x + "," + y + " = ", result);
@@ -89,35 +88,34 @@ class Grid {
     }
 
     atp(p) {
-        if ( p[0] > 0 && p[0] < this.gridSize && p[1] > 0 && p[1] < this.gridSize) {
+        if ( p[0] > 0 && p[0] < BOARD_SIZE && p[1] > 0 && p[1] < BOARD_SIZE) {
             return this.grid[p[0]][p[1]];
         }
         return TILE_OUTSIDE_OF_BOARD;
     }
 
     setAt(x, y, c) {
-        if ( x > 0 && x < this.gridSize && y > 0 && y < this.gridSize) {
+        if ( x > 0 && x < BOARD_SIZE && y > 0 && y < BOARD_SIZE) {
             this.grid[x][y] = c;
         }
     }
 
     setAtp(p, c) {
         //console.log("setting stone " + c + " at [" + p[0] + "," + p[1] + "]");
-        if ( p[0] > 0 && p[0] < this.gridSize && p[1] > 0 && p[1] < this.gridSize) {
+        if ( p[0] > 0 && p[0] < BOARD_SIZE && p[1] > 0 && p[1] < BOARD_SIZE) {
             this.grid[p[0]][p[1]] = c;
         }
     }
 }
 
 class Board {
-    constructor(gridSize) {
-        this.gridSize = gridSize;
-        this.grid = new Grid(gridSize);
+    constructor() {
+        this.grid = new Grid();
     }
 
     setStone(stone, x, y) {
         if ( !this.isValid(x, y) ) {
-            alert("Error: (" + x + "," + y + ") out of range (" + this.gridSize + ")");
+            alert("Error: (" + x + "," + y + ") out of range (" + BOARD_SIZE + ")");
             return;
         }
         if ( ! this.isFree(x, y) ) {
@@ -130,7 +128,7 @@ class Board {
     }
 
     isValid(x, y) {
-        return  x > 0 && x < this.gridSize && y > 0 && y < this.gridSize;
+        return  x > 0 && x < BOARD_SIZE && y > 0 && y < BOARD_SIZE;
     }
 
     isFree(x, y) {
@@ -149,19 +147,18 @@ class Board {
 
 class Renderer {
 
-    constructor(gridSize) {
-        this.gridSize = gridSize;
+    constructor() {
         this.board = document.getElementById("board");
         this.width = board.clientWidth;
         this.height = board.clientHeight;
-        this.tileWidth = Math.round(this.width / gridSize);
-        this.tileHeight = Math.round(this.height / gridSize);
+        this.tileWidth = Math.round(this.width / BOARD_SIZE);
+        this.tileHeight = Math.round(this.height / BOARD_SIZE);
 
     }
 
-    drawBoard(gridSize) {
-        for ( let i=0; i < this.width-this.gridSize; i += this.tileWidth) {
-            for ( let j=0; j < this.height-this.gridSize; j += this.tileHeight) {
+    drawBoard() {
+        for ( let i=0; i < this.width-BOARD_SIZE; i += this.tileWidth) {
+            for ( let j=0; j < this.height-BOARD_SIZE; j += this.tileHeight) {
                 let tile = document.createElement("div");
                 tile.style.position = "absolute";
                 tile.style.left = i;
@@ -216,8 +213,7 @@ class CalculationResult {
 }
 
 class Calculator {
-    constructor(gridSize, color, firstInNeighborhood, calculateCounterMove) {
-        this.gridSize = gridSize;
+    constructor(color, firstInNeighborhood, calculateCounterMove) {
         this.color = color;
         this.firstWhite = firstInNeighborhood;
         this.calculateCounterMove = calculateCounterMove;
