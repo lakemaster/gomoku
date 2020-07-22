@@ -65,9 +65,9 @@ class Game {
         this.isRunning = false;
         setTimeout(()=> {
             if ( win ) {
-                alert("Congratulations, You win!"); 
+                alert("Congratulations, You won!"); 
             } else {
-                alert("Sorry, You loose!")
+                alert("Sorry, You lost!")
             }}, 0);
         }
 }
