@@ -78,7 +78,7 @@ class Grid {
         this.grid = new Array(BOARD_SIZE).fill(TILE_FREE).map(()=>new Array(BOARD_SIZE).fill(TILE_FREE));
     }
 
-    at(p) {
+    get(p) {
         if ( p.x > 0 && p.x < BOARD_SIZE && p.y > 0 && p.y < BOARD_SIZE) {
             return this.grid[p.x][p.y];
         }
@@ -101,14 +101,14 @@ class Position {
     }
 
     isFree() {
-        if ( this.grid.at(this) == TILE_FREE ) {
+        if ( this.grid.get(this) == TILE_FREE ) {
             return true;
         }
         return false;
     }
 
     is(stone) {
-        if ( this.grid.at(this) == stone ) {
+        if ( this.grid.get(this) == stone ) {
             return true;
         }
         return false;
@@ -230,7 +230,7 @@ class Position {
                 Position.of(p.x+2, p.y+1),
                 Position.of(p.x+2, p.y+2),
             ];
-            neighbors.concat(extendedNeighbors);
+            neighbors = neighbors.concat(extendedNeighbors);
         }
 
         let validNeighbors = [];
@@ -385,7 +385,7 @@ class Calculator {
             for ( let y = 1; y < BOARD_SIZE; y++) {
                 let p = new Position(x, y);
                 if ( p.isBlack() ) {
-                    let vn = Position.validNeighbors(p, false, true);
+                    let vn = Position.validNeighbors(p, true, true);
                     let i = Math.floor(Math.random() * vn.length);
                     return vn[i];
                 }
