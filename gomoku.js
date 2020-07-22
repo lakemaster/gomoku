@@ -238,7 +238,7 @@ class Calculator {
                     // calculate countermove
                     if ( this.calculateCounterMove ) {
                         let c = this.color == TILE_WHITE ? TILE_BLACK : TILE_WHITE;
-                        let cmCalculator = new Calculator(BOARD_SIZE, c, false, false);
+                        let cmCalculator = new Calculator(c, false, false);
                         let cmResult = cmCalculator.calculate(grid);
                         value = value - cmResult.value;
                     }
