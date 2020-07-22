@@ -22,16 +22,16 @@ window.addEventListener("load", () => {
     let handleMouseClick = function(event) {
         let pos = game.renderer.calcPosition(event);
 
-        if ( game.board.isValidAndFree(pos[0], pos[1]) ) {
-            game.board.setStone(TILE_BLACK, pos[0], pos[1]);
+        if ( pos.isValidAndFree() ) {
+            game.board.setStone(TILE_BLACK, pos);
 
             if ( game.board.gameOver(TILE_BLACK) ) {
                 game.stop(true);
             } else {
                 let result = game.calculator.calculate(game.board.grid);
 
-                if ( game.board.isValidAndFree(result.position.x, result.position.y) ) {
-                    game.board.setStone(TILE_WHITE, result.position.x, result.position.y);
+                if ( result.position.isValidAndFree() ) {
+                    game.board.setStone(TILE_WHITE, result.position);
                     if ( game.board.gameOver(TILE_WHITE) ) {
                         game.stop(false);
                     }
@@ -104,177 +104,6 @@ class Grid {
         //console.log("setting stone " + c + " at [" + p[0] + "," + p[1] + "]");
         if ( p[0] > 0 && p[0] < BOARD_SIZE && p[1] > 0 && p[1] < BOARD_SIZE) {
             this.grid[p[0]][p[1]] = c;
-        }
-    }
-}
-
-class Board {
-    constructor() {
-        this.grid = new Grid();
-    }
-
-    setStone(stone, x, y) {
-        if ( !this.isValid(x, y) ) {
-            alert("Error: (" + x + "," + y + ") out of range (" + BOARD_SIZE + ")");
-            return;
-        }
-        if ( ! this.isFree(x, y) ) {
-            alert("Error: Position (" + x + "," + y + ") occupied");
-            return;
-        }
-        // console.log("set stone at " + x +"," + y);
-        this.grid.setAt(x, y, stone);
-        game.renderer.drawStone(stone, x, y);
-    }
-
-    isValid(x, y) {
-        return  x > 0 && x < BOARD_SIZE && y > 0 && y < BOARD_SIZE;
-    }
-
-    isFree(x, y) {
-        return this.grid.at(x,y) == TILE_FREE;
-    }
-
-    isValidAndFree(x, y) {
-        return  this.isValid(x, y) && this.isFree(x, y);
-    }
-
-    gameOver(stone) {
-        let valuation = new Valuation(stone);
-        return valuation.value() >= 10000;
-    }
-}
-
-class Renderer {
-
-    constructor() {
-        this.board = document.getElementById("board");
-        this.width = board.clientWidth;
-        this.height = board.clientHeight;
-        this.tileWidth = Math.round(this.width / BOARD_SIZE);
-        this.tileHeight = Math.round(this.height / BOARD_SIZE);
-
-    }
-
-    drawBoard() {
-        for ( let i=0; i < this.width-BOARD_SIZE; i += this.tileWidth) {
-            for ( let j=0; j < this.height-BOARD_SIZE; j += this.tileHeight) {
-                let tile = document.createElement("div");
-                tile.style.position = "absolute";
-                tile.style.left = i;
-                tile.style.top = j;
-                tile.style.width = this.tileWidth;
-                tile.style.height = this.tileHeight;
-                tile.style.border = "thin solid #000000"
-                board.appendChild(tile);
-            }
-        }
-    }
-
-    drawStone(stone, x, y) {
-        let stoneElement = document.createElement("img");
-    
-        stoneElement.src = (stone == TILE_WHITE) ? "white-stone.png" : "black-stone.png";
-        stoneElement.style.position = "absolute";
-        stoneElement.style.left = x * this.tileWidth - Math.round(this.tileWidth/2)+1;
-        stoneElement.style.top = y * this.tileHeight - Math.round(this.tileHeight/2)+1;
-        stoneElement.style.width = this.tileWidth;
-        stoneElement.style.height = this.tileHeight;
-    
-        this.board.appendChild(stoneElement);
-    }
-
-    calcPosition(clickEvent) {
-        let xpx = clickEvent.clientX - this.board.offsetLeft;
-        let ypx = clickEvent.clientY - this.board.offsetTop;
-
-        let x = 10 * xpx / this.tileWidth;
-        let y = 10 * ypx / this.tileHeight;
-
-        let xm = x % 10;
-        let ym = y % 10;
-        if ( (xm >= 4 && xm <= 6) || (xm >= 4 && xm <= 6) ) {
-            return [-1, -1];
-        }
-
-        return( [Math.round(x/10), Math.round(y/10)] );
-    }
-}
-
-class CalculationResult {
-    constructor(position, value) {
-        this.position = position;
-        this.value = value;
-    }
-
-    toString() {
-        return position.toString() + " - " + value;
-    }
-}
-
-class Calculator {
-    constructor(color, firstInNeighborhood, calculateCounterMove) {
-        this.color = color;
-        this.firstWhite = firstInNeighborhood;
-        this.calculateCounterMove = calculateCounterMove;
-    }
-
-    calculate(grid) {
-        // workaround to prevent starting in upper left corner
-        if ( this.firstWhite ) {
-            this.firstWhite = false;
-            return new CalculationResult(this.putInNeighborhood(), 0);
-        }
-
-        let resultPosition;
-        let highestValue = -10000000;
-        for ( let x = 1; x < BOARD_SIZE; x++) {
-            for ( let y = 1; y < BOARD_SIZE; y++) {
-                let p = new Position(x, y);
-                if ( p.isFree() && p.isInExtendedNeighborhood()) {
-                    p.set(this.color);
-                    let value = this.valuate(this.color);
-
-                    // calculate countermove
-                    if ( this.calculateCounterMove ) {
-                        let c = this.color == TILE_WHITE ? TILE_BLACK : TILE_WHITE;
-                        let cmCalculator = new Calculator(c, false, false);
-                        let cmResult = cmCalculator.calculate(grid);
-                        value = value - cmResult.value;
-                    }
-
-                    // save highest score
-                    if ( value > highestValue) {
-                        //console.log("new highest of " + value + " for position " + p.toString());
-                        highestValue = value;
-                        resultPosition = p;
-                    }
-                    p.setFree();
-                }
-            }
-        }
-
-        let calculationResult = new CalculationResult(resultPosition, highestValue);
-        //console.log(calculationResult);
-        return calculationResult;
-    }
-
-    valuate(color) {
-        let valuation = new Valuation(color);
-        return valuation.value();
-    }
-
-    putInNeighborhood() {
-        console.log("putInNeighborhood called");
-        for ( let x = 1; x < BOARD_SIZE; x++) {
-            for ( let y = 1; y < BOARD_SIZE; y++) {
-                let p = new Position(x, y);
-                if ( p.isBlack() ) {
-                    let vn = Position.validNeighbors(p, false, true);
-                    let i = Math.floor(Math.random() * vn.length);
-                    return vn[i];
-                }
-            }
         }
     }
 }
@@ -432,6 +261,170 @@ class Position {
     }
 
 }
+
+class Board {
+    constructor() {
+        this.grid = new Grid();
+    }
+
+    setStone(stone, p) {
+        p.set(stone);
+        game.renderer.drawStone(stone, p);
+    }
+
+    isValid(x, y) {
+        return  x > 0 && x < BOARD_SIZE && y > 0 && y < BOARD_SIZE;
+    }
+
+    isFree(x, y) {
+        return this.grid.at(x,y) == TILE_FREE;
+    }
+
+    isValidAndFree(x, y) {
+        return  this.isValid(x, y) && this.isFree(x, y);
+    }
+
+    gameOver(stone) {
+        let valuation = new Valuation(stone);
+        return valuation.value() >= 10000;
+    }
+}
+
+class Renderer {
+
+    constructor() {
+        this.board = document.getElementById("board");
+        this.width = board.clientWidth;
+        this.height = board.clientHeight;
+        this.tileWidth = Math.round(this.width / BOARD_SIZE);
+        this.tileHeight = Math.round(this.height / BOARD_SIZE);
+
+    }
+
+    drawBoard() {
+        for ( let i=0; i < this.width-BOARD_SIZE; i += this.tileWidth) {
+            for ( let j=0; j < this.height-BOARD_SIZE; j += this.tileHeight) {
+                let tile = document.createElement("div");
+                tile.style.position = "absolute";
+                tile.style.left = i;
+                tile.style.top = j;
+                tile.style.width = this.tileWidth;
+                tile.style.height = this.tileHeight;
+                tile.style.border = "thin solid #000000"
+                board.appendChild(tile);
+            }
+        }
+    }
+
+    drawStone(stone, p) {
+        let stoneElement = document.createElement("img");
+    
+        stoneElement.src = (stone == TILE_WHITE) ? "white-stone.png" : "black-stone.png";
+        stoneElement.style.position = "absolute";
+        stoneElement.style.left = p.x * this.tileWidth - Math.round(this.tileWidth/2)+1;
+        stoneElement.style.top = p.y * this.tileHeight - Math.round(this.tileHeight/2)+1;
+        stoneElement.style.width = this.tileWidth;
+        stoneElement.style.height = this.tileHeight;
+    
+        this.board.appendChild(stoneElement);
+    }
+
+    calcPosition(clickEvent) {
+        let xpx = clickEvent.clientX - this.board.offsetLeft;
+        let ypx = clickEvent.clientY - this.board.offsetTop;
+
+        let x = 10 * xpx / this.tileWidth;
+        let y = 10 * ypx / this.tileHeight;
+
+        let xm = x % 10;
+        let ym = y % 10;
+        if ( (xm >= 4 && xm <= 6) || (xm >= 4 && xm <= 6) ) {
+            return [-1, -1];
+        }
+
+        return( Position.of(Math.round(x/10), Math.round(y/10)) );
+    }
+}
+
+class CalculationResult {
+    constructor(position, value) {
+        this.position = position;
+        this.value = value;
+    }
+
+    toString() {
+        return position.toString() + " - " + value;
+    }
+}
+
+class Calculator {
+    constructor(color, firstInNeighborhood, calculateCounterMove) {
+        this.color = color;
+        this.firstWhite = firstInNeighborhood;
+        this.calculateCounterMove = calculateCounterMove;
+    }
+
+    calculate(grid) {
+        // workaround to prevent starting in upper left corner
+        if ( this.firstWhite ) {
+            this.firstWhite = false;
+            return new CalculationResult(this.putInNeighborhood(), 0);
+        }
+
+        let resultPosition;
+        let highestValue = -10000000;
+        for ( let x = 1; x < BOARD_SIZE; x++) {
+            for ( let y = 1; y < BOARD_SIZE; y++) {
+                let p = new Position(x, y);
+                if ( p.isFree() && p.isInExtendedNeighborhood()) {
+                    p.set(this.color);
+                    let value = this.valuate(this.color);
+
+                    // calculate countermove
+                    if ( this.calculateCounterMove ) {
+                        let c = this.color == TILE_WHITE ? TILE_BLACK : TILE_WHITE;
+                        let cmCalculator = new Calculator(c, false, false);
+                        let cmResult = cmCalculator.calculate(grid);
+                        value = value - cmResult.value;
+                    }
+
+                    // save highest score
+                    if ( value > highestValue) {
+                        //console.log("new highest of " + value + " for position " + p.toString());
+                        highestValue = value;
+                        resultPosition = p;
+                    }
+                    p.setFree();
+                }
+            }
+        }
+
+        let calculationResult = new CalculationResult(resultPosition, highestValue);
+        //console.log(calculationResult);
+        return calculationResult;
+    }
+
+    valuate(color) {
+        let valuation = new Valuation(color);
+        return valuation.value();
+    }
+
+    putInNeighborhood() {
+        console.log("putInNeighborhood called");
+        for ( let x = 1; x < BOARD_SIZE; x++) {
+            for ( let y = 1; y < BOARD_SIZE; y++) {
+                let p = new Position(x, y);
+                if ( p.isBlack() ) {
+                    let vn = Position.validNeighbors(p, false, true);
+                    let i = Math.floor(Math.random() * vn.length);
+                    return vn[i];
+                }
+            }
+        }
+    }
+}
+
+
 
 // todo: does not work
 Position.prototype.toString = function positionToString() {
