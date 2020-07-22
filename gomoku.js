@@ -78,32 +78,16 @@ class Grid {
         this.grid = new Array(BOARD_SIZE).fill(TILE_FREE).map(()=>new Array(BOARD_SIZE).fill(TILE_FREE));
     }
 
-    at(x, y) {
-        let result = TILE_OUTSIDE_OF_BOARD;
-        if ( x > 0 && x < BOARD_SIZE && y > 0 && y < BOARD_SIZE) {
-            result = this.grid[x][y];
-        }
-        //console.log("Grid.at: " + x + "," + y + " = ", result);
-        return result;
-    }
-
-    atp(p) {
-        if ( p[0] > 0 && p[0] < BOARD_SIZE && p[1] > 0 && p[1] < BOARD_SIZE) {
-            return this.grid[p[0]][p[1]];
+    at(p) {
+        if ( p.x > 0 && p.x < BOARD_SIZE && p.y > 0 && p.y < BOARD_SIZE) {
+            return this.grid[p.x][p.y];
         }
         return TILE_OUTSIDE_OF_BOARD;
     }
 
-    setAt(x, y, c) {
-        if ( x > 0 && x < BOARD_SIZE && y > 0 && y < BOARD_SIZE) {
-            this.grid[x][y] = c;
-        }
-    }
-
-    setAtp(p, c) {
-        //console.log("setting stone " + c + " at [" + p[0] + "," + p[1] + "]");
-        if ( p[0] > 0 && p[0] < BOARD_SIZE && p[1] > 0 && p[1] < BOARD_SIZE) {
-            this.grid[p[0]][p[1]] = c;
+    set(p, stone) {
+        if ( p.x > 0 && p.x < BOARD_SIZE && p.y > 0 && p.y < BOARD_SIZE) {
+            this.grid[p.x][p.y] = stone;
         }
     }
 }
@@ -117,14 +101,14 @@ class Position {
     }
 
     isFree() {
-        if ( this.grid.at(this.x, this.y) == TILE_FREE ) {
+        if ( this.grid.at(this) == TILE_FREE ) {
             return true;
         }
         return false;
     }
 
     is(stone) {
-        if ( this.grid.at(this.x, this.y) == stone ) {
+        if ( this.grid.at(this) == stone ) {
             return true;
         }
         return false;
@@ -146,9 +130,7 @@ class Position {
     }
 
     set(stone) {
-        //console.log("Set stone " + stone + " at [" + this.x + "," + this.y + "]")
-        this.grid.setAtp([this.x, this.y], stone);
-        //console.log("stone at [" + this.x + "," + this.y + "] = " + this.grid.at(this.x, this.y));
+        this.grid.set(this, stone);
     }
 
     isWhite() {
@@ -270,18 +252,6 @@ class Board {
     setStone(stone, p) {
         p.set(stone);
         game.renderer.drawStone(stone, p);
-    }
-
-    isValid(x, y) {
-        return  x > 0 && x < BOARD_SIZE && y > 0 && y < BOARD_SIZE;
-    }
-
-    isFree(x, y) {
-        return this.grid.at(x,y) == TILE_FREE;
-    }
-
-    isValidAndFree(x, y) {
-        return  this.isValid(x, y) && this.isFree(x, y);
     }
 
     gameOver(stone) {
