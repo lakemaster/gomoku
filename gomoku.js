@@ -348,7 +348,7 @@ class Calculator {
                 let p = new Position(x, y);
                 if ( p.isFree() && p.isInExtendedNeighborhood()) {
                     p.set(this.color);
-                    let value = this.valuate(this.color);
+                    let value = (new Valuation(color)).value(); 
 
                     // calculate countermove
                     if ( this.calculateCounterMove ) {
@@ -372,11 +372,6 @@ class Calculator {
         let calculationResult = new CalculationResult(resultPosition, highestValue);
         //console.log(calculationResult);
         return calculationResult;
-    }
-
-    valuate(color) {
-        let valuation = new Valuation(color);
-        return valuation.value();
     }
 
     putInNeighborhood() {
