@@ -348,7 +348,7 @@ class Calculator {
                 let p = new Position(x, y);
                 if ( p.isFree() && p.isInExtendedNeighborhood()) {
                     p.set(this.color);
-                    let value = (new Valuation(color)).value(); 
+                    let value = (new Valuation(this.color)).value(); 
 
                     // calculate countermove
                     if ( this.calculateCounterMove ) {
@@ -506,11 +506,11 @@ class Valuation {
         this.twoOpen = 0;
         this.twoHalfOpen = 0;
         this.neighbor = 0;
+
+        this.valuate();
     }
 
-    value() {
-        //console.log("valuation of " + this.color);
-
+    valuate() {
         let g = game.board.grid;
         for ( let x = 1; x < BOARD_SIZE; x++ ) {
             for ( let y = 1; y < BOARD_SIZE; y++ ) {
@@ -538,8 +538,10 @@ class Valuation {
                 }
             }
         }
+    }
 
-        let value = this.five * 10000
+    value() {
+        return this.five * 10000
             + this.fourOpen * 1000
             + this.fourHalfOpen * 100
             + this.threeOpen * 10
@@ -547,8 +549,6 @@ class Valuation {
             + this.twoOpen * 3
             + this.twoHalfOpen * 2
             + this.neighbor * 1;
-
-        return value;
     }
 
     static getPaths(position, color) {
